@@ -103,6 +103,32 @@ const metal=material(0xc5cbd0,.25,.8);
 const lips=material(0xb96f70);
 
 const character=new THREE.Group();
+ // ORIGINAL FACE REFERENCE
+const textureLoader = new THREE.TextureLoader();
+
+textureLoader.load(
+  './face-reference.jpg',
+  (texture) => {
+    texture.colorSpace = THREE.SRGBColorSpace;
+
+    const referenceMaterial = new THREE.MeshBasicMaterial({
+      map: texture,
+      side: THREE.DoubleSide
+    });
+
+    const reference = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.5, 2),
+      referenceMaterial
+    );
+
+    reference.position.set(-1.5, 2.2, 0);
+    scene.add(reference);
+  },
+  undefined,
+  (error) => {
+    console.error('Ошибка загрузки фотографии:', error);
+  }
+);
 scene.add(character);
 
 function sphere(parent,x,y,z,sx,sy,sz,mat){
