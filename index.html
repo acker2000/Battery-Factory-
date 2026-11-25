@@ -3,238 +3,348 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Battery Factory 3D</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Character</title>
+
 <style>
-*{box-sizing:border-box}
-body{margin:0;overflow:hidden;background:#202830;color:white;font-family:Arial}
-canvas{display:block}
-#ui{position:fixed;top:14px;left:14px;z-index:5;pointer-events:none}
-#ui h2{margin:0 0 8px;font-size:19px}
-#info{background:#202830;padding:10px;border-radius:9px}
-#hint{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#202830;padding:12px;border-radius:10px;z-index:5;text-align:center;font-size:13px;width:max-content;max-width:80%}
-#look{position:fixed;inset:0;z-index:2;touch-action:none}
-#move{position:fixed;left:12px;bottom:65px;z-index:6;display:grid;grid-template-columns:48px 48px 48px;gap:5px}
-button{border:0;border-radius:10px;background:#354656;color:white;padding:13px;font-size:18px;touch-action:none}
-#forward{grid-column:2}
-#left{grid-column:1;grid-row:2}
-#back{grid-column:2;grid-row:2}
-#right{grid-column:3;grid-row:2}
-#take{position:fixed;right:15px;bottom:65px;z-index:6;background:#167fc0}
-#error{position:fixed;top:100px;left:10px;right:10px;color:white;background:#9b2525;padding:12px;z-index:20;display:none;white-space:pre-wrap}
+* { box-sizing:border-box; }
+body {
+ margin:0;
+ overflow:hidden;
+ background:#25272b;
+ font-family:Arial,sans-serif;
+}
+canvas { display:block; }
+#info {
+ position:fixed;
+ top:15px;
+ left:15px;
+ color:white;
+ background:#111a;
+ padding:12px 16px;
+ border-radius:10px;
+ font-size:14px;
+ pointer-events:none;
+}
 </style>
+
+<script type="importmap">
+{
+ "imports": {
+  "three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+ }
+}
+</script>
 </head>
+
 <body>
-<div id="ui">
-<h2>🔋 BATTERY FACTORY</h2>
-<div id="info">Ячейки 21700: <span id="count">0</span></div>
-</div>
-<div id="hint">Добро пожаловать в мастерскую!</div>
-<div id="look"></div>
-<div id="move">
-<button id="forward">▲</button>
-<button id="left">◀</button>
-<button id="back">▼</button>
-<button id="right">▶</button>
-</div>
-<button id="take">ВЗЯТЬ</button>
-<div id="error"></div>
+<div id="info">3D CHARACTER · Перетаскивай для вращения</div>
 
 <script type="module">
-const errorBox=document.getElementById('error');
-function showError(e){
-errorBox.style.display='block';
-errorBox.textContent='Ошибка 3D: '+(e.message||e);
-}
-window.addEventListener('error',e=>showError(e.error||e.message));
-window.addEventListener('unhandledrejection',e=>showError(e.reason));
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-async function start(){
-try{
-const THREE=await import('https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x25272b);
 
-const scene=new THREE.Scene();
-scene.background=new THREE.Color(0x82919c);
-scene.fog=new THREE.Fog(0x82919c,18,35);
+const camera = new THREE.PerspectiveCamera(
+ 35, window.innerWidth/window.innerHeight, 0.1, 100
+);
+camera.position.set(3.8,2.8,8);
 
-const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,100);
-camera.position.set(0,1.7,5);
-
-const renderer=new THREE.WebGLRenderer({antialias:true});
-renderer.setSize(innerWidth,innerHeight);
-renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
+const renderer = new THREE.WebGLRenderer({
+ antialias:true
+});
+renderer.setSize(window.innerWidth,window.innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.15;
 document.body.appendChild(renderer.domElement);
 
-scene.add(new THREE.HemisphereLight(0xffffff,0x65717a,2.2));
+const controls = new OrbitControls(camera,renderer.domElement);
+controls.target.set(0,1.65,0);
+controls.enableDamping=true;
+controls.minDistance=3;
+controls.maxDistance=12;
+controls.maxPolarAngle=Math.PI/2;
 
-const light=new THREE.DirectionalLight(0xffffff,2.5);
-light.position.set(3,8,5);
+scene.add(new THREE.HemisphereLight(0xffffff,0x554455,2));
+
+const light = new THREE.DirectionalLight(0xffffff,3);
+light.position.set(4,8,6);
 light.castShadow=true;
 scene.add(light);
 
-function box(w,h,d,x,y,z,color){
-const mesh=new THREE.Mesh(
-new THREE.BoxGeometry(w,h,d),
-new THREE.MeshStandardMaterial({color,roughness:.75})
+const fill = new THREE.DirectionalLight(0xffd9d0,1.2);
+fill.position.set(-5,4,-4);
+scene.add(fill);
+
+function material(color,roughness=.7,metalness=0){
+ return new THREE.MeshStandardMaterial({
+  color,roughness,metalness
+ });
+}
+
+const skin=material(0xf0c3aa);
+const skinDark=material(0xd99e87);
+const hair=material(0x493023);
+const hairLight=material(0x68412f);
+const black=material(0x151515);
+const denim=material(0x343c49);
+const white=material(0xe9e9e9);
+const blue=material(0x3989c6,.22);
+const iris=material(0x367ba5,.25);
+const dark=material(0x211b19);
+const metal=material(0xc5cbd0,.25,.8);
+const lips=material(0xb96f70);
+
+const character=new THREE.Group();
+scene.add(character);
+
+function sphere(parent,x,y,z,sx,sy,sz,mat){
+ const mesh=new THREE.Mesh(
+  new THREE.SphereGeometry(1,32,24),mat
+ );
+ mesh.position.set(x,y,z);
+ mesh.scale.set(sx,sy,sz);
+ mesh.castShadow=true;
+ mesh.receiveShadow=true;
+ parent.add(mesh);
+ return mesh;
+}
+
+function cylinderBetween(parent,a,b,r1,r2,mat){
+ const start=new THREE.Vector3(...a);
+ const end=new THREE.Vector3(...b);
+ const direction=new THREE.Vector3().subVectors(end,start);
+ const mesh=new THREE.Mesh(
+  new THREE.CylinderGeometry(r2,r1,direction.length(),20),
+  mat
+ );
+ mesh.position.copy(start).add(end).multiplyScalar(.5);
+ mesh.quaternion.setFromUnitVectors(
+  new THREE.Vector3(0,1,0),direction.normalize()
+ );
+ mesh.castShadow=true;
+ parent.add(mesh);
+ return mesh;
+}
+
+// BODY
+// Torso
+sphere(character,0,1.58,0,.31,.48,.19,skin);
+
+// Neck
+cylinderBetween(character,[0,1.91,0],[0,2.13,0],.105,.11,skin);
+
+// Black top
+sphere(character,0,1.62,.015,.325,.32,.205,black);
+
+// Waist
+sphere(character,0,1.18,0,.27,.16,.17,skin);
+
+// Denim shorts
+sphere(character,0,1.08,0,.30,.19,.21,denim);
+
+// Shorts legs
+sphere(character,-.15,.99,.015,.145,.18,.17,denim);
+sphere(character,.15,.99,.015,.145,.18,.17,denim);
+
+// Belt
+const belt=new THREE.Mesh(
+ new THREE.TorusGeometry(.245,.018,8,40),
+ material(0x25201c)
 );
-mesh.position.set(x,y,z);
-mesh.castShadow=true;
-mesh.receiveShadow=true;
-scene.add(mesh);
-return mesh;
+belt.position.set(0,1.19,0);
+belt.rotation.x=Math.PI/2;
+character.add(belt);
+
+// Arms
+for(const side of [-1,1]){
+ const x=side;
+
+ cylinderBetween(
+  character,[x*.31,1.85,0],
+  [x*.40,1.48,.015],.085,.065,skin
+ );
+
+ sphere(character,x*.40,1.46,.015,.068,.075,.07,skin);
+
+ cylinderBetween(
+  character,[x*.40,1.46,.015],
+  [x*.43,1.12,.07],.065,.045,skin
+ );
+
+ sphere(character,x*.43,1.08,.075,.052,.075,.045,skin);
+
+ // Fingers
+ for(let i=0;i<4;i++){
+  cylinderBetween(
+   character,
+   [x*.43+(i-1.5)*.018,1.07,.09],
+   [x*.43+(i-1.5)*.022,1.00,.095],
+   .012,.009,skin
+  );
+ }
 }
 
-// Пол
-box(20,.2,20,0,-.1,0,0x626b70);
+// Legs
+for(const side of [-1,1]){
+ const x=side*.15;
 
-// Стены
-box(20,5,.2,0,2.5,-8,0xd1d6d9);
-box(.2,5,16,-8,2.5,0,0xb5bec4);
-box(.2,5,16,8,2.5,0xb5bec4);
+ cylinderBetween(
+  character,[x, .94,0],
+  [x*1.05,.52,0],.105,.083,skin
+ );
 
-// Потолочные балки
-box(16,.15,.15,0,4.8,-2,0x68747c);
-box(16,.15,.15,0,4.8,3,0x68747c);
+ sphere(character,x*1.05,.51,0,.085,.09,.09,skin);
 
-// Рабочий стол
-box(4,.18,2,0,1,-1,0x343e47);
-box(3.8,.9,1.8,0,.48,-1,0x69747b);
+ cylinderBetween(
+  character,[x*1.05,.49,0],
+  [x*1.08,.13,.015],.08,.065,skin
+ );
 
-for(const x of [-1.7,1.7]){
-for(const z of [-1.7,-.3]){
-box(.12,.9,.12,x,.45,z,0x303940);
-}
+ // Sneakers
+ sphere(character,x*1.08,.09,.09,.105,.075,.20,white);
 }
 
-// Ячейки 21700
-function makeCell(x,z){
-const group=new THREE.Group();
+// HEAD
+const head=new THREE.Group();
+head.position.set(0,2.34,0);
+character.add(head);
 
-const body=new THREE.Mesh(
-new THREE.CylinderGeometry(.0105,.0105,.07,16),
-new THREE.MeshStandardMaterial({
-color:0x263c4c,
-metalness:.55,
-roughness:.3
-})
+// Face base
+sphere(head,0,0,0,.255,.345,.235,skin);
+
+// Jaw and cheeks
+sphere(head,0,-.15,.045,.21,.17,.20,skin);
+sphere(head,-.19,-.025,.105,.085,.095,.10,skin);
+sphere(head,.19,-.025,.105,.085,.095,.10,skin);
+
+// Forehead
+sphere(head,0,.20,.015,.22,.13,.205,skin);
+
+// Ears
+for(const side of [-1,1]){
+ sphere(head,side*.25,-.025,0,.055,.09,.06,skin);
+}
+
+// Eyebrows
+for(const side of [-1,1]){
+ const brow=sphere(
+  head,side*.105,.105,.209,.075,.018,.025,dark
+ );
+ brow.rotation.z=side*-.08;
+}
+
+// Eyes
+for(const side of [-1,1]){
+ sphere(head,side*.105,.045,.207,.078,.047,.027,white);
+ sphere(head,side*.105,.045,.231,.030,.032,.013,iris);
+ sphere(head,side*.105,.045,.242,.014,.022,.008,dark);
+ sphere(head,side*.095,.058,.249,.008,.009,.004,white);
+}
+
+// Nose
+sphere(head,0,-.035,.245,.038,.075,.045,skin);
+sphere(head,0,-.085,.267,.048,.027,.034,skin);
+sphere(head,-.027,-.087,.278,.018,.013,.013,skinDark);
+sphere(head,.027,-.087,.278,.018,.013,.013,skinDark);
+
+// Lips
+sphere(head,0,-.145,.222,.072,.025,.025,lips);
+sphere(head,0,-.166,.219,.061,.018,.022,skinDark);
+
+// Chin
+sphere(head,0,-.235,.09,.105,.06,.11,skin);
+
+// HAIR
+// Hair cap
+sphere(head,0,.235,-.015,.265,.19,.245,hair);
+
+// Back hair
+sphere(head,0,-.08,-.17,.255,.36,.105,hair);
+sphere(head,0,-.36,-.15,.24,.24,.09,hair);
+
+// Side locks
+for(const side of [-1,1]){
+ const lock=sphere(
+  head,side*.205,-.16,.015,.075,.34,.09,hair
+ );
+ lock.rotation.z=side*-.10;
+
+ sphere(
+  head,side*.21,-.37,.035,.065,.17,.07,hairLight
+ );
+}
+
+// Hair front strands
+for(const side of [-1,1]){
+ const strand=sphere(
+  head,side*.115,.20,.18,.045,.18,.07,hairLight
+ );
+ strand.rotation.z=side*.12;
+}
+
+// Necklace
+const necklace=new THREE.Mesh(
+ new THREE.TorusGeometry(.105,.006,8,40),
+ metal
 );
-group.add(body);
+necklace.position.set(0,1.91,.18);
+necklace.rotation.x=Math.PI/2;
+character.add(necklace);
 
-const top=new THREE.Mesh(
-new THREE.CylinderGeometry(.0105,.0105,.003,16),
-new THREE.MeshStandardMaterial({
-color:0xd5d9dc,
-metalness:.8
-})
+// Pendant
+sphere(character,0,1.80,.19,.022,.035,.012,metal);
+
+// Watch
+cylinderBetween(
+ character,[-.40,1.43,.015],[-.40,1.49,.015],
+ .065,.065,dark
 );
-top.position.y=.0365;
-group.add(top);
 
-const ring=new THREE.Mesh(
-new THREE.TorusGeometry(.010,.001,6,16),
-new THREE.MeshStandardMaterial({
-color:0xd6a33b,
-metalness:.7
-})
+// Shoes details
+for(const side of [-1,1]){
+ for(let i=0;i<3;i++){
+  cylinderBetween(
+   character,
+   [side*.162,.11,.04+i*.045],
+   [side*.162,.11,.07+i*.045],
+   .008,.008,metal
+  );
+ }
+}
+
+// Ground
+const floor=new THREE.Mesh(
+ new THREE.PlaneGeometry(200,200),
+ material(0x303136)
 );
-ring.rotation.x=Math.PI/2;
-ring.position.y=.035;
-group.add(ring);
+floor.rotation.x=-Math.PI/2;
+floor.position.y=0;
+floor.receiveShadow=true;
+scene.add(floor);
 
-group.position.set(x,1.125,z);
-scene.add(group);
-return group;
-}
-
-const cells=[];
-for(let i=0;i<5;i++){
-cells.push(makeCell(-1.25+i*.62,-1));
-}
-
-let collected=0;
-let rotation=0;
-const move={forward:false,back:false,left:false,right:false};
-
-function control(id,key){
-const button=document.getElementById(id);
-button.addEventListener('pointerdown',e=>{
-e.preventDefault();
-move[key]=true;
-button.setPointerCapture(e.pointerId);
-});
-button.addEventListener('pointerup',()=>move[key]=false);
-button.addEventListener('pointercancel',()=>move[key]=false);
-}
-control('forward','forward');
-control('back','back');
-control('left','left');
-control('right','right');
-
-// Поворот камеры
-let dragging=false,lastX=0;
-const look=document.getElementById('look');
-look.addEventListener('pointerdown',e=>{
-if(e.target.closest('button'))return;
-dragging=true;
-lastX=e.clientX;
-});
-look.addEventListener('pointermove',e=>{
-if(!dragging)return;
-rotation-=(e.clientX-lastX)*.005;
-lastX=e.clientX;
-});
-look.addEventListener('pointerup',()=>dragging=false);
-look.addEventListener('pointercancel',()=>dragging=false);
-
-// Взять ячейку
-document.getElementById('take').onclick=()=>{
-if(!cells.length){
-document.getElementById('hint').textContent='Ячейки закончились!';
-return;
-}
-const cell=cells.pop();
-scene.remove(cell);
-collected++;
-document.getElementById('count').textContent=collected;
-document.getElementById('hint').textContent='Ячейка 21700 взята!';
-};
+// Camera focus
+controls.update();
 
 function animate(){
-requestAnimationFrame(animate);
-
-const speed=.055;
-const direction=new THREE.Vector3();
-
-if(move.forward)direction.z-=speed;
-if(move.back)direction.z+=speed;
-if(move.left)direction.x-=speed;
-if(move.right)direction.x+=speed;
-
-direction.applyAxisAngle(new THREE.Vector3(0,1,0),rotation);
-camera.position.add(direction);
-
-camera.position.x=THREE.MathUtils.clamp(camera.position.x,-7,7);
-camera.position.z=THREE.MathUtils.clamp(camera.position.z,-7,7);
-camera.position.y=1.7;
-
-camera.rotation.set(0,rotation,0);
-renderer.render(scene,camera);
+ requestAnimationFrame(animate);
+ controls.update();
+ renderer.render(scene,camera);
 }
 animate();
 
 window.addEventListener('resize',()=>{
-camera.aspect=innerWidth/innerHeight;
-camera.updateProjectionMatrix();
-renderer.setSize(innerWidth,innerHeight);
+ camera.aspect=window.innerWidth/window.innerHeight;
+ camera.updateProjectionMatrix();
+ renderer.setSize(window.innerWidth,window.innerHeight);
 });
-}catch(e){
-showError(e);
-}
-}
-
-start();
 </script>
 </body>
 </html>
