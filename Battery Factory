@@ -1,0 +1,186 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Battery Factory 3D</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;overflow:hidden;background:#15191e;font-family:Arial;color:white}
+#ui{position:fixed;top:15px;left:15px;z-index:5;pointer-events:none}
+#ui h2{margin:0 0 8px;font-size:20px}
+#info{background:#202830;padding:10px 14px;border-radius:10px;font-size:14px}
+#hint{position:fixed;bottom:25px;left:50%;transform:translateX(-50%);background:#202830;padding:12px 18px;border-radius:10px;z-index:5;text-align:center;font-size:13px}
+#look{position:fixed;right:0;top:0;width:65%;height:100%;z-index:2}
+#move{position:fixed;left:15px;bottom:20px;z-index:6;display:flex;gap:8px}
+button{border:0;border-radius:12px;background:#303c48;color:white;padding:14px;font-size:18px}
+button:active{background:#368cce}
+#take{position:fixed;right:18px;bottom:25px;z-index:6;background:#2188c9}
+</style>
+</head>
+<body>
+<div id="ui">
+<h2>🔋 BATTERY FACTORY</h2>
+<div id="info">Ячейки 21700: <span id="count">0</span></div>
+</div>
+<div id="hint">Добро пожаловать в мастерскую!</div>
+<div id="look"></div>
+<div id="move">
+<button id="left">◀</button>
+<button id="forward">▲</button>
+<button id="back">▼</button>
+<button id="right">▶</button>
+</div>
+<button id="take">ВЗЯТЬ</button>
+
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x8999a5);
+scene.fog=new THREE.Fog(0x8999a5,15,35);
+
+const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,100);
+camera.position.set(0,1.7,5);
+
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
+renderer.shadowMap.enabled=true;
+document.body.appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xffffff,0x46515c,2));
+const light=new THREE.DirectionalLight(0xffffff,2);
+light.position.set(4,8,5);
+scene.add(light);
+
+function box(w,h,d,x,y,z,color){
+const m=new THREE.Mesh(
+new THREE.BoxGeometry(w,h,d),
+new THREE.MeshStandardMaterial({color,roughness:.7})
+);
+m.position.set(x,y,z);
+m.castShadow=true;
+m.receiveShadow=true;
+scene.add(m);
+return m;
+}
+
+// Пол
+box(20,.2,20,0,-.1,0,0x555e64);
+
+// Стены
+box(20,5,.2,0,2.5,-8,0xc4cbd0);
+box(.2,5,16,-8,2.5,0,0xb3bdc4);
+box(.2,5,16,8,2.5,0,0xb3bdc4);
+
+// Рабочий стол
+box(4,.2,2,0,1,-1,0x303941);
+box(3.8,1,1.8,0,.5,-1,0x59636c);
+
+// Ножки стола
+for(const x of [-1.7,1.7]){
+for(const z of [-1.7,-.3]){
+box(.12,.9,.12,x,.45,z,0x242b30);
+}
+}
+
+// Ячейка 21700
+function makeCell(x,z){
+const group=new THREE.Group();
+const body=new THREE.Mesh(
+new THREE.CylinderGeometry(.35,.35,1.35,20),
+new THREE.MeshStandardMaterial({color:0x303c48,metalness:.65,roughness:.3})
+);
+group.add(body);
+const top=new THREE.Mesh(
+new THREE.CylinderGeometry(.25,.25,.08,20),
+new THREE.MeshStandardMaterial({color:0xc4c8cc,metalness:.8})
+);
+top.position.y=.7;
+group.add(top);
+const ring=new THREE.Mesh(
+new THREE.TorusGeometry(.27,.035,8,24),
+new THREE.MeshStandardMaterial({color:0xd4a33e,metalness:.7})
+);
+ring.rotation.x=Math.PI/2;
+ring.position.y=.66;
+group.add(ring);
+group.position.set(x,1.4,z);
+scene.add(group);
+return group;
+}
+
+const cells=[];
+for(let i=0;i<5;i++){
+cells.push(makeCell(-1.3+i*.65,-1));
+}
+
+let collected=0;
+let move={forward:false,back:false,left:false,right:false};
+let rotation=0;
+
+function control(id,key){
+const b=document.getElementById(id);
+b.addEventListener('pointerdown',e=>{
+e.preventDefault();move[key]=true;
+});
+b.addEventListener('pointerup',()=>move[key]=false);
+b.addEventListener('pointerleave',()=>move[key]=false);
+b.addEventListener('pointercancel',()=>move[key]=false);
+}
+control('forward','forward');
+control('back','back');
+control('left','left');
+control('right','right');
+
+let dragging=false,lastX=0;
+document.getElementById('look').addEventListener('pointerdown',e=>{
+dragging=true;lastX=e.clientX;
+});
+addEventListener('pointerup',()=>dragging=false);
+addEventListener('pointermove',e=>{
+if(!dragging)return;
+rotation-=(e.clientX-lastX)*.005;
+lastX=e.clientX;
+});
+
+document.getElementById('take').onclick=()=>{
+if(cells.length){
+const cell=cells.pop();
+scene.remove(cell);
+collected++;
+document.getElementById('count').textContent=collected;
+document.getElementById('hint').textContent='Ячейка 21700 взята!';
+}else{
+document.getElementById('hint').textContent='На столе больше нет ячеек!';
+}
+};
+
+function animate(){
+requestAnimationFrame(animate);
+const speed=.055;
+const direction=new THREE.Vector3();
+if(move.forward)direction.z-=speed;
+if(move.back)direction.z+=speed;
+if(move.left)direction.x-=speed;
+if(move.right)direction.x+=speed;
+direction.applyAxisAngle(new THREE.Vector3(0,1,0),rotation);
+camera.position.add(direction);
+camera.position.x=THREE.MathUtils.clamp(camera.position.x,-7,7);
+camera.position.z=THREE.MathUtils.clamp(camera.position.z,-7,7);
+camera.position.y=1.7;
+camera.rotation.set(0,rotation,0);
+renderer.render(scene,camera);
+}
+animate();
+
+addEventListener('resize',()=>{
+camera.aspect=innerWidth/innerHeight;
+camera.updateProjectionMatrix();
+renderer.setSize(innerWidth,innerHeight);
+});
+</script>
+</body>
+</html>
