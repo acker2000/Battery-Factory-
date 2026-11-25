@@ -133,14 +133,14 @@ top.position.y=.0365;
 group.add(top);
 
 const ring=new THREE.Mesh(
-new THREE.TorusGeometry(.24,.025,8,24),
+new THREE.TorusGeometry(.010,.001,6,16),
 new THREE.MeshStandardMaterial({
 color:0xd6a33b,
 metalness:.7
 })
 );
 ring.rotation.x=Math.PI/2;
-ring.position.y=.66;
+ring.position.y=.035;
 group.add(ring);
 
 group.position.set(x,1.48,z);
